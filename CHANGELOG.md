@@ -3,6 +3,10 @@
 ## 0.15.0
 
 ### Breaking Changes
+- **Component Rename**: `JazzProvider` renamed to `JazzVueProvider` for consistency with jazz-tools 0.15.4 naming
+  - Import: `import { JazzVueProvider } from "jazz-vue-vamp"` 
+  - Usage: `<JazzVueProvider>` instead of `<JazzProvider>`
+  - No backward compatibility - `JazzProvider` is no longer available
 - **useAccount() API Changes**: Updated to match React 0.15.4 behavior
   - `me` is now always nullable (no auto-fallback to contextMe)
   - Removed `useAccountOrGuest()` function - use `useAccount()` instead
@@ -45,7 +49,7 @@
 - **Enhanced useAcceptInvite()**: Now includes hashchange event handling for dynamic invite acceptance
   - Automatically listens for URL changes and re-processes invites
   - Proper cleanup of event listeners on component unmount
-- **Enhanced JazzProvider**: Added new props for better SSR and logout handling
+- **Enhanced JazzVueProvider**: Added new props for better SSR and logout handling
   - `enableSSR` - Enable server-side rendering support with anonymous fallback
   - `logOutReplacement` - Custom logout handler for advanced use cases
   - Improved context recreation logic for better performance
@@ -74,6 +78,15 @@ if (agent.value._type === "Anonymous") {
   // Handle authenticated user - me may be null until loaded
   // Use agent to load data
 }
+
+// Component rename
+// Before (pre-0.15.0)
+import { JazzProvider } from "jazz-vue-vamp";
+<JazzProvider>...</JazzProvider>
+
+// After (0.15.0)
+import { JazzVueProvider } from "jazz-vue-vamp";
+<JazzVueProvider>...</JazzVueProvider>
 
 // Import updates (if using jazz-browser directly)
 // Before
@@ -2209,7 +2222,6 @@ export const MyAccount = co.account({
 - Updated dependencies
   - jazz-browser@0.7.0-alpha.7
   - jazz-tools@0.7.0-alpha.7
-  - cojson@0.7.0-alpha.7
 
 ## 0.7.0-alpha.6
 
@@ -2228,7 +2240,6 @@ export const MyAccount = co.account({
 - Updated dependencies
   - jazz-browser@0.7.0-alpha.5
   - jazz-tools@0.7.0-alpha.5
-  - cojson@0.7.0-alpha.5
 
 ## 0.7.0-alpha.4
 
@@ -2263,7 +2274,6 @@ export const MyAccount = co.account({
 - Updated dependencies
   - jazz-browser@0.7.0-alpha.1
   - jazz-tools@0.7.0-alpha.1
-  - cojson@0.7.0-alpha.1
 
 ## 0.7.0-alpha.0
 

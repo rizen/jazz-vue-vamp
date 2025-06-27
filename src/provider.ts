@@ -36,8 +36,8 @@ declare module "jazz-tools" {
 export const JazzContextSymbol = Symbol("JazzContext");
 export const JazzAuthContextSymbol = Symbol("JazzAuthContext");
 
-export const JazzProvider = defineComponent({
-  name: "JazzProvider",
+export const JazzVueProvider = defineComponent({
+  name: "JazzVueProvider",
   props: {
     guestMode: {
       type: Boolean,

@@ -2,7 +2,8 @@
 
 import { CoMap, Group, type ID, coField } from "jazz-tools";
 import { describe, expect, it } from "vitest";
-import { createInviteLink, useAcceptInvite } from "../index.js";
+import { createInviteLink } from "jazz-tools/browser";
+import { useAcceptInvite } from "../index.js";
 import { createJazzTestAccount, linkAccounts } from "../testing.js";
 import { waitFor, withJazzTestSetup } from "./testUtils.js";
 

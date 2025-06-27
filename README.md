@@ -53,16 +53,16 @@ export const MyAppAccount = co.account({
 ```vue
 <!-- App.vue -->
 <template>
-  <JazzProvider
+  <JazzVueProvider
     :sync="{ peer: 'wss://cloud.jazz.tools/?key=your-app@example.com' }"
     :AccountSchema="MyAppAccount"
   >
     <TodoApp />
-  </JazzProvider>
+  </JazzVueProvider>
 </template>
 
 <script setup lang="ts">
-import { JazzProvider } from "jazz-vue-vamp";
+import { JazzVueProvider } from "jazz-vue-vamp";
 import { MyAppAccount } from "./schema";
 import TodoApp from "./TodoApp.vue";
 </script>
@@ -245,19 +245,19 @@ const context = useJazzContext();
 // Access node, networking, etc.
 ```
 
-## JazzProvider
+## JazzVueProvider
 
-The `JazzProvider` component sets up the Jazz context for your entire application.
+The `JazzVueProvider` component sets up the Jazz context for your entire application.
 
 ### Basic Usage
 
 ```vue
-<JazzProvider
+<JazzVueProvider
   :sync="{ peer: 'wss://cloud.jazz.tools/?key=your-app@example.com' }"
   :AccountSchema="MyAppAccount"
 >
   <MyApp />
-</JazzProvider>
+</JazzVueProvider>
 ```
 
 ### Props
@@ -277,7 +277,7 @@ The `JazzProvider` component sets up the Jazz context for your entire applicatio
 ### Advanced Configuration
 
 ```vue
-<JazzProvider
+<JazzVueProvider
   :sync="{ 
     peer: 'wss://cloud.jazz.tools/?key=your-app@example.com',
     when: 'online' 
@@ -291,7 +291,7 @@ The `JazzProvider` component sets up the Jazz context for your entire applicatio
   :onAnonymousAccountDiscarded="cleanupAnonymousData"
 >
   <MyApp />
-</JazzProvider>
+</JazzVueProvider>
 ```
 
 ## Authentication
@@ -389,12 +389,12 @@ const { me, agent } = useAccount(MyAppAccount, {
 Allow anonymous users to access public data:
 
 ```vue
-<JazzProvider 
+<JazzVueProvider 
   :guestMode="true"
   :sync="{ peer: 'wss://cloud.jazz.tools' }"
 >
   <PublicTodosView />
-</JazzProvider>
+</JazzVueProvider>
 ```
 
 ## Testing
@@ -519,9 +519,33 @@ import { createInviteLink, parseInviteLink } from "jazz-browser";
 
 // After (jazz-browser functionality moved to jazz-tools/browser)
 import { createInviteLink, parseInviteLink } from "jazz-tools/browser";
-// Or use the re-exports from jazz-vue-vamp
-import { createInviteLink, parseInviteLink } from "jazz-vue-vamp";
 ```
+
+### Component Rename
+
+```vue
+<!-- Before (pre-0.15.0) -->
+<template>
+  <JazzProvider :sync="sync" :AccountSchema="MyAccount">
+    <MyApp />
+  </JazzProvider>
+</template>
+<script setup>
+import { JazzProvider } from "jazz-vue-vamp";
+</script>
+
+<!-- After (0.15.0) -->
+<template>
+  <JazzVueProvider :sync="sync" :AccountSchema="MyAccount">
+    <MyApp />
+  </JazzVueProvider>
+</template>
+<script setup>
+import { JazzVueProvider } from "jazz-vue-vamp";
+</script>
+```
+
+Note: Starting from 0.15.0, you must use `JazzVueProvider` - the old `JazzProvider` name is no longer available.
 
 ### `useAccount()` Changes
 
@@ -560,7 +584,7 @@ if (agent.value._type === "Anonymous") {
 ### New Features Available
 
 - **experimental_useInboxSender()** - Send messages between users
-- **Enhanced JazzProvider** - New props for SSR and custom logout handling
+- **Enhanced JazzVueProvider** - New props for SSR and custom logout handling
 - **Better error handling** - Improved account creation and subscription management
 - **Performance improvements** - Optimized context management and subscription cleanup
 
