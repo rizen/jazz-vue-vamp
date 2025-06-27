@@ -96,10 +96,18 @@ export function useAccount(
     if (!context.value) {
       return null;
     }
-    const agent = "me" in context.value
-      ? context.value.me as RegisteredAccount
-      : context.value.guest;
-    return agent;
+
+    // Prioritize guest context if it exists (guest mode enabled)
+    if ("guest" in context.value) {
+      return context.value.guest;
+    }
+
+    // For auth contexts, return the me object (both authenticated and anonymous users have accounts)
+    if ("me" in context.value) {
+      return context.value.me as RegisteredAccount;
+    }
+
+    return null;
   });
 
   // Determine what we're dealing with
@@ -142,14 +150,19 @@ export function useAccount(
         return;
       }
 
-      if (agent._type === "Anonymous") {
-        // For anonymous agents, me is null (no subscription needed)
+      // Handle different agent types:
+      // - Guest mode (AnonymousJazzAgent): truly anonymous, no persistent account
+      // - Auth mode unauthenticated: temporary account exists, but user not authenticated  
+      // - Auth mode authenticated: persistent account exists and user authenticated
+
+      if (agent._type === "Anonymous" && !("id" in agent)) {
+        // True guest mode - no account to subscribe to
         me.value = null;
         return;
       }
 
-      // For authenticated agents, create a subscription to load the account
-      const accountId = agent.id;
+      // For auth mode (both authenticated and unauthenticated), subscribe to the account
+      const accountId = (agent as RegisteredAccount).id;
 
       try {
         unsubscribe = subscribeToCoValue(
@@ -184,7 +197,26 @@ export function useAccount(
 
   return {
     me: computed(() => me.value ? toRaw(me.value) : null),
-    agent: computed(() => currentAgent.value ? toRaw(currentAgent.value) : null),
+    agent: computed(() => {
+      const agent = currentAgent.value;
+      if (!agent) return null;
+
+      // For guest mode, return as-is
+      if (agent._type === "Anonymous") {
+        return toRaw(agent);
+      }
+
+      // For auth mode, check if user is actually authenticated
+      const authSecretStorage = inject<any>(JazzAuthContextSymbol);
+      const isAuthenticated = !authSecretStorage || authSecretStorage.isAuthenticated !== false;
+
+      // Return agent with correct _type based on authentication state
+      const rawAgent = toRaw(agent);
+      return {
+        ...rawAgent,
+        _type: isAuthenticated ? "Account" as const : "Anonymous" as const
+      };
+    }),
     logOut: () => context.value?.logOut?.() || (() => { }),
   };
 }

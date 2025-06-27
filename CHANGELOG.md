@@ -121,17 +121,9 @@ export const MyAccount = co.account({
 ```
 
 ### Fixes
-- **useAccount() Type Accuracy**: Fixed TypeScript type errors when using the new `co.account()` schema syntax (AnyAccountSchema)
-  - Now properly supports schema-based accounts (`AnyAccountSchema`)
-  - Added `anySchemaToCoSchema()` conversion for new account schemas
-  - Improved type inference and eliminated "type not matching" errors
-- **Context Initialization**: Fixed "No active account" errors during provider setup
-  - Improved timing of context creation and subscription management
-  - Better handling of anonymous vs authenticated initialization flows
-- **Account Subscription**: Enhanced account loading with proper anonymous agent handling
-  - Anonymous agents now correctly return null subscriptions
-  - Authenticated agents use specialized subscription logic
-  - Better error handling and subscription cleanup
+- **useAccount**: Fixed `agent._type` incorrectly returning `"Account"` for unauthenticated users
+  - Now correctly returns `agent._type: "Anonymous"` when user is not authenticated
+  - Fixes issue where `agent._type` was always `"Account"` regardless of authentication state
 - **JazzVueProvider**: Fixed prop validation warning for `AccountSchema` when using `co.account()` schemas
   - Changed prop type from `Function` to `[Function, Object]` to accept both class-based and schema-based accounts
   - Eliminates Vue warning: "Invalid prop: type check failed for prop 'AccountSchema'. Expected Function, got Object"

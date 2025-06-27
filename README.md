@@ -140,23 +140,51 @@ Access the current user account and agent. Works in all authentication modes.
 - `agent` - Current agent (authenticated account or anonymous guest) 
 - `logOut` - Function to sign out
 
+#### Authentication States
+
+The `useAccount()` composable handles three distinct authentication states:
+
+1. **Authenticated Users** (auth mode with valid credentials):
+   - `me.value` - Has the user's persistent account
+   - `agent.value._type` - Returns `"Account"`
+   - `agent.value` - Same as `me.value` (the authenticated account)
+
+2. **Unauthenticated Users** (auth mode without valid credentials):
+   - `me.value` - Has a temporary account for the session
+   - `agent.value._type` - Returns `"Anonymous"`
+   - `agent.value` - The temporary account (can be used to load public data)
+
+3. **Guest Mode Users** (`guestMode: true` in provider):
+   - `me.value` - Always `null` (no persistent account)
+   - `agent.value._type` - Returns `"Anonymous"`
+   - `agent.value` - Anonymous agent (can be used to load public data)
+
 ```ts
 // Basic usage - works for authenticated and guest users
 const { me, agent, logOut } = useAccount();
 
-// Check authentication state
-if (agent.value._type === "Anonymous") {
-  // Guest user - me will be null
-  // Use agent to load public data
+// Handle different authentication states
+if (agent.value._type === "Account") {
+  // Authenticated user
+  console.log("Welcome back!", me.value?.profile?.name);
+  // Use me.value or agent.value (they're the same)
 } else {
-  // Authenticated user - me may be null until loaded
-  // Use agent to load data
+  // Anonymous user (either unauthenticated or guest mode)
+  if (me.value) {
+    // Unauthenticated user with temporary account
+    console.log("You have a temporary session");
+    // Can use me.value for temporary data
+  } else {
+    // True guest mode
+    console.log("You're browsing as a guest");
+    // me.value is null, use agent.value for public data only
+  }
 }
 
 // With schema (provides better typing)
 const { me, agent, logOut } = useAccount(MyAppAccount);
 
-// With deep resolution
+// With deep resolution for authenticated users
 const { me, agent, logOut } = useAccount(MyAppAccount, {
   resolve: { 
     root: { todos: true },
@@ -164,9 +192,17 @@ const { me, agent, logOut } = useAccount(MyAppAccount, {
   }
 });
 
-// For guest access to public data, use the agent
+// Load public data (works in all modes)
 const publicTodos = useCoState(TodoList, publicTodoListId.value, {
-  loadAs: agent.value  // Works for both authenticated and guest users
+  loadAs: agent.value  // Always available regardless of auth state
+});
+
+// Load private data (only works when me.value exists)
+const privateTodos = computed(() => {
+  if (!me.value) return null;
+  return useCoState(TodoList, me.value.root?.privateTodosId, {
+    loadAs: agent.value
+  });
 });
 ```
 
