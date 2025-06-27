@@ -16,6 +16,11 @@
   const { me } = useAccount();
   const { me } = useAccount({ resolve: { root: true } });
   ```
+- **useIsAuthenticated() Composable**: Added Vue equivalent of React's useIsAuthenticated hook
+  ```ts
+  const isAuthenticated = useIsAuthenticated();
+  // Reactive boolean that tracks authentication state changes
+  ```
 
 ### Fixes
 - **useAccount() Type Accuracy**: Fixed TypeScript type errors when using the new `co.account()` schema syntax (AnyAccountSchema)

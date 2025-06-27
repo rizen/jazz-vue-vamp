@@ -191,6 +191,26 @@ useAcceptInvite({
 });
 ```
 
+### `useIsAuthenticated()`
+
+Check if the current user is authenticated.
+
+```ts
+const isAuthenticated = useIsAuthenticated();
+
+// Use in template
+// <div v-if="isAuthenticated">Welcome back!</div>
+// <AuthForm v-else />
+
+// Or watch for changes
+watchEffect(() => {
+  if (isAuthenticated.value) {
+    // User just signed in
+    router.push('/dashboard');
+  }
+});
+```
+
 ### `useJazzContext()`
 
 Access the raw Jazz context for advanced use cases.

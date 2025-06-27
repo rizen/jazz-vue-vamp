@@ -64,6 +64,24 @@ export function useAuthSecretStorage() {
   return context;
 }
 
+export function useIsAuthenticated(): Ref<boolean> {
+  const authSecretStorage = useAuthSecretStorage();
+  const isAuthenticated = ref(authSecretStorage.isAuthenticated);
+
+  onMounted(() => {
+    // Subscribe to auth state changes
+    const unsubscribe = authSecretStorage.onUpdate(() => {
+      isAuthenticated.value = authSecretStorage.isAuthenticated;
+    });
+
+    onUnmounted(() => {
+      unsubscribe();
+    });
+  });
+
+  return isAuthenticated;
+}
+
 // Support for new AccountSchema (co.account())
 export function useAccount<S extends AnyAccountSchema>(
   AccountSchema: S
