@@ -7,9 +7,13 @@
   - `me` is now always nullable (no auto-fallback to contextMe)
   - Removed `useAccountOrGuest()` function - use `useAccount()` instead
 - **New Return Value**: `useAccount()` now returns `{ me, agent, logOut }` instead of `{ me, logOut }`
+- **Package Dependencies**: Upgraded to jazz-tools 0.15.4
+  - `jazz-browser` dependency removed (now `jazz-tools/browser`)
+  - Updated imports: `import { ... } from "jazz-tools/browser"`
 - Converting the discontinued jazz-vue package to a standalone package known as jazz-vue-vamp.
 
 ### Features
+- **Full React 0.15.4 Parity**: Complete feature compatibility with React jazz-tools
 - **agent Property**: Added `agent` property to `useAccount()` return value
   - Always available (authenticated account or anonymous guest)
   - Can be used to load data in all rendering modes (guest, authenticated, unauthenticated)
@@ -33,10 +37,27 @@
   const isAuthenticated = useIsAuthenticated();
   // Reactive boolean that tracks authentication state changes
   ```
+- **experimental_useInboxSender() Composable**: Added Vue equivalent of React's experimental inbox sender
+  ```ts
+  const sendMessage = experimental_useInboxSender(inboxOwnerID);
+  await sendMessage(myMessage);
+  ```
+- **Enhanced useAcceptInvite()**: Now includes hashchange event handling for dynamic invite acceptance
+  - Automatically listens for URL changes and re-processes invites
+  - Proper cleanup of event listeners on component unmount
+- **Enhanced JazzProvider**: Added new props for better SSR and logout handling
+  - `enableSSR` - Enable server-side rendering support with anonymous fallback
+  - `logOutReplacement` - Custom logout handler for advanced use cases
+  - Improved context recreation logic for better performance
+  - Stable callback references to prevent unnecessary re-renders
+- **Jazz-tools 0.15.4 Support**: Full compatibility with latest jazz-tools release
+  - Consolidated browser imports (`jazz-tools/browser`)
+  - Latest CoValue and subscription patterns
+  - Improved type safety and performance
 
 ### Migration Guide
 ```ts
-// Before (0.15.0)
+// Before (pre-0.15.0)
 const { me } = useAccountOrGuest();
 if (me.value._type === "Anonymous") {
   // Handle guest
@@ -53,6 +74,37 @@ if (agent.value._type === "Anonymous") {
   // Handle authenticated user - me may be null until loaded
   // Use agent to load data
 }
+
+// Import updates (if using jazz-browser directly)
+// Before
+import { ... } from "jazz-browser";
+
+// After
+import { ... } from "jazz-tools/browser";
+```
+
+### Important: Schema Migration Pattern
+If you encounter "No active account" errors during account creation, ensure your schema migrations pass explicit groups to all CoValue creation:
+
+```ts
+// ❌ Wrong - will cause "No active account" error
+export const MyAccount = co.account({
+  root: MyRoot,
+}).withMigration(async (account) => {
+  if (!account.root) {
+    account.root = MyRoot.create({ items: [] }); // Missing group!
+  }
+});
+
+// ✅ Correct - explicit group parameters
+export const MyAccount = co.account({
+  root: MyRoot,
+}).withMigration(async (account) => {
+  if (!account.root) {
+    const group = Group.create(account);
+    account.root = MyRoot.create({ items: [] }, group);
+  }
+});
 ```
 
 ### Fixes
@@ -60,7 +112,18 @@ if (agent.value._type === "Anonymous") {
   - Now properly supports schema-based accounts (`AnyAccountSchema`)
   - Added `anySchemaToCoSchema()` conversion for new account schemas
   - Improved type inference and eliminated "type not matching" errors
+- **Context Initialization**: Fixed "No active account" errors during provider setup
+  - Improved timing of context creation and subscription management
+  - Better handling of anonymous vs authenticated initialization flows
+- **Account Subscription**: Enhanced account loading with proper anonymous agent handling
+  - Anonymous agents now correctly return null subscriptions
+  - Authenticated agents use specialized subscription logic
+  - Better error handling and subscription cleanup
 
+### Performance
+- **Provider Optimization**: Reduced unnecessary context recreations
+- **Subscription Management**: Improved cleanup and memory management
+- **Callback Stability**: Stable references prevent excessive re-renders
 
 ## 0.14.28
 

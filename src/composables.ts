@@ -1,4 +1,4 @@
-import { consumeInviteLinkFromWindowLocation } from "jazz-browser";
+import { consumeInviteLinkFromWindowLocation } from "jazz-tools/browser";
 import {
   type AnonymousJazzAgent,
   type AuthSecretStorage,
@@ -20,6 +20,7 @@ import {
   type Loaded,
   type InstanceOfSchema,
   anySchemaToCoSchema,
+  InboxSender,
 } from "jazz-tools";
 import {
   type ComputedRef,
@@ -42,15 +43,13 @@ import {
   type RegisteredAccount,
 } from "./provider.js";
 
-export const logoutHandler = ref<() => void>();
-
 export function useJazzContext(): Ref<
-  JazzContextType<RegisteredAccount>,
-  JazzContextType<RegisteredAccount>
+  JazzContextType<RegisteredAccount> | undefined,
+  JazzContextType<RegisteredAccount> | undefined
 > {
   const context =
-    inject<Ref<JazzContextType<RegisteredAccount>>>(JazzContextSymbol);
-  if (!context?.value) {
+    inject<Ref<JazzContextType<RegisteredAccount> | undefined>>(JazzContextSymbol);
+  if (!context) {
     throw new Error("useJazzContext must be used within a JazzProvider");
   }
   return context;
@@ -94,9 +93,13 @@ export function useAccount(
 
   // Get the current agent (either authenticated account or anonymous guest)
   const currentAgent = computed(() => {
-    return "me" in context.value
+    if (!context.value) {
+      return null;
+    }
+    const agent = "me" in context.value
       ? context.value.me as RegisteredAccount
       : context.value.guest;
+    return agent;
   });
 
   // Determine what we're dealing with
@@ -105,10 +108,8 @@ export function useAccount(
 
   // Case 1: No arguments or just options
   if (!AccountSchemaOrOptions || (AccountSchemaOrOptions && 'resolve' in AccountSchemaOrOptions && !AccountSchemaOrOptions.collaborative)) {
-    // Use current agent's schema
-    Schema = currentAgent.value?._type !== "Anonymous"
-      ? currentAgent.value.constructor as CoValueClass<Account>
-      : Account as CoValueClass<Account>;
+    // Use default Account schema when no specific schema provided
+    Schema = Account as CoValueClass<Account>;
     resolveOptions = AccountSchemaOrOptions || options;
   } else {
     // Case 2: AccountSchema provided (either class or co.account() schema)
@@ -122,22 +123,71 @@ export function useAccount(
     resolveOptions = options;
   }
 
-  const accountId = currentAgent.value?._type !== "Anonymous" ? currentAgent.value.id : undefined;
+  // Create a reactive account subscription that handles both authenticated and anonymous cases
+  const me = ref<any>(null);
+  let unsubscribe: (() => void) | undefined;
 
-  const me = useCoState<any, any>(
-    Schema,
-    accountId,
-    resolveOptions,
+  watch(
+    [() => currentAgent.value, () => context.value],
+    () => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = undefined;
+      }
+
+      const agent = currentAgent.value;
+
+      if (!agent || !context.value) {
+        me.value = null;
+        return;
+      }
+
+      if (agent._type === "Anonymous") {
+        // For anonymous agents, me is null (no subscription needed)
+        me.value = null;
+        return;
+      }
+
+      // For authenticated agents, create a subscription to load the account
+      const accountId = agent.id;
+
+      try {
+        unsubscribe = subscribeToCoValue(
+          Schema,
+          accountId,
+          {
+            resolve: resolveOptions?.resolve,
+            loadAs: toRaw(agent),
+            onUnavailable: () => {
+              me.value = null;
+            },
+            onUnauthorized: () => {
+              me.value = null;
+            },
+            syncResolution: true,
+          },
+          (value) => {
+            me.value = value;
+          },
+        );
+      } catch (error) {
+        console.error("useAccount subscription error:", error);
+        me.value = null;
+      }
+    },
+    { deep: true, immediate: true },
   );
+
+  onUnmounted(() => {
+    if (unsubscribe) unsubscribe();
+  });
 
   return {
     me: computed(() => me.value ? toRaw(me.value) : null),
-    agent: computed(() => toRaw(currentAgent.value)),
-    logOut: context.value.logOut || (() => { }),
+    agent: computed(() => currentAgent.value ? toRaw(currentAgent.value) : null),
+    logOut: () => context.value?.logOut?.() || (() => { }),
   };
 }
-
-
 
 export function useCoState<V extends CoValue, const R extends RefsToResolve<V>>(
   Schema: CoValueClass<V>,
@@ -160,7 +210,7 @@ export function useCoState<V extends CoValue, const R extends RefsToResolve<V>>(
       if (unsubscribe) unsubscribe();
 
       const idValue = unref(id);
-      if (!idValue) return;
+      if (!idValue || !context.value) return;
 
       unsubscribe = subscribeToCoValue(
         Schema,
@@ -217,7 +267,7 @@ export function useAcceptInvite<V extends CoValue>({
     );
   }
 
-  const runInviteAcceptance = () => {
+  const handleInvite = () => {
     const result = consumeInviteLinkFromWindowLocation({
       as: toRaw((context.value as JazzAuthContext<RegisteredAccount>).me),
       invitedObjectSchema,
@@ -232,15 +282,64 @@ export function useAcceptInvite<V extends CoValue>({
   };
 
   onMounted(() => {
-    runInviteAcceptance();
+    handleInvite();
+
+    // Listen for hashchange events like React implementation
+    window.addEventListener("hashchange", handleInvite);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener("hashchange", handleInvite);
   });
 
   watch(
     () => onAccept,
     (newOnAccept, oldOnAccept) => {
       if (newOnAccept !== oldOnAccept) {
-        runInviteAcceptance();
+        handleInvite();
       }
     },
   );
+}
+
+export function experimental_useInboxSender<
+  I extends CoValue,
+  O extends CoValue | undefined,
+>(inboxOwnerID: MaybeRef<string | undefined>) {
+  const context = useJazzContext();
+
+  if (!context.value) {
+    throw new Error("experimental_useInboxSender must be used within a JazzProvider");
+  }
+
+  if (!("me" in context.value)) {
+    throw new Error(
+      "experimental_useInboxSender can't be used in a JazzProvider with auth === 'guest'.",
+    );
+  }
+
+  const me = (context.value as JazzAuthContext<RegisteredAccount>).me;
+  const inboxRef = ref<Promise<InboxSender<I, O>> | undefined>(undefined);
+
+  const sendMessage = async (message: I) => {
+    const ownerID = unref(inboxOwnerID);
+    if (!ownerID) throw new Error("Inbox owner ID is required");
+
+    if (!inboxRef.value) {
+      const inbox = InboxSender.load<I, O>(ownerID, toRaw(me));
+      inboxRef.value = inbox;
+    }
+
+    let inbox = await inboxRef.value;
+
+    if (inbox.owner.id !== ownerID) {
+      const req = InboxSender.load<I, O>(ownerID, toRaw(me));
+      inboxRef.value = req;
+      inbox = await req;
+    }
+
+    return inbox.sendMessage(message);
+  };
+
+  return sendMessage;
 }

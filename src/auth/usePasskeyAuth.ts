@@ -1,4 +1,4 @@
-import { BrowserPasskeyAuth } from "jazz-browser";
+import { BrowserPasskeyAuth } from "jazz-tools/browser";
 import { computed } from "vue";
 import { useAuthSecretStorage, useJazzContext } from "../composables.js";
 import { useIsAuthenticated } from "./useIsAuthenticated.js";
@@ -24,11 +24,18 @@ export function usePasskeyAuth({
   const authSecretStorage = useAuthSecretStorage();
   const isAuthenticated = useIsAuthenticated();
 
+  if (!context.value) {
+    throw new Error("Passkey auth requires an active Jazz context");
+  }
+
   if ("guest" in context.value) {
     throw new Error("Passkey auth is not supported in guest mode");
   }
 
   const authMethod = computed(() => {
+    if (!context.value) {
+      throw new Error("Passkey auth requires an active Jazz context");
+    }
     return new BrowserPasskeyAuth(
       context.value.node.crypto,
       context.value.authenticate,

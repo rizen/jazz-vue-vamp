@@ -6,4 +6,4 @@ export * from "./auth/usePasskeyAuth.js";
 export { default as DemoAuthBasicUI } from "./auth/DemoAuthBasicUI.vue";
 export { default as ProgressiveImg } from "./ProgressiveImg.vue";
 
-export { createInviteLink, parseInviteLink } from "jazz-browser";
+export { createInviteLink, parseInviteLink } from "jazz-tools/browser";

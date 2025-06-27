@@ -22,11 +22,18 @@ export function usePassphraseAuth({
   const authSecretStorage = useAuthSecretStorage();
   const isAuthenticated = useIsAuthenticated();
 
+  if (!context.value) {
+    throw new Error("Passphrase auth requires an active Jazz context");
+  }
+
   if ("guest" in context.value) {
     throw new Error("Passphrase auth is not supported in guest mode");
   }
 
   const authMethod = computed(() => {
+    if (!context.value) {
+      throw new Error("Passphrase auth requires an active Jazz context");
+    }
     return new PassphraseAuth(
       context.value.node.crypto,
       context.value.authenticate,

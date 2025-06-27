@@ -17,7 +17,7 @@ Vamp is a chord progression in Jazz that extends a song's duration. The whole po
 ## Installation
 
 ```bash
-npm install jazz-vue-vamp jazz-tools jazz-browser
+npm install jazz-vue-vamp jazz-tools
 ```
 
 ## Quick Start
@@ -117,7 +117,7 @@ function addTodo() {
   const todo = TodoItem.create({
     title: newTodo.value,
     completed: false
-  }, { owner: me.value });
+  }, { owner: agent.value }); // Use agent for ownership
   
   me.value.root.todos.push(todo);
   newTodo.value = "";
@@ -196,6 +196,26 @@ useAcceptInvite({
 });
 ```
 
+### `experimental_useInboxSender()`
+
+Send messages to other users' inboxes for real-time communication.
+
+```ts
+// Send a message to another user
+const sendMessage = experimental_useInboxSender(recipientUserId);
+
+// Send structured data
+await sendMessage({
+  type: 'notification',
+  content: 'You have a new todo!',
+  todoId: 'todo_123'
+});
+
+// Works with reactive recipient IDs
+const selectedUser = ref('user_456');
+const sendToSelected = experimental_useInboxSender(selectedUser);
+```
+
 ### `useIsAuthenticated()`
 
 Check if the current user is authenticated.
@@ -223,6 +243,55 @@ Access the raw Jazz context for advanced use cases.
 ```ts
 const context = useJazzContext();
 // Access node, networking, etc.
+```
+
+## JazzProvider
+
+The `JazzProvider` component sets up the Jazz context for your entire application.
+
+### Basic Usage
+
+```vue
+<JazzProvider
+  :sync="{ peer: 'wss://cloud.jazz.tools/?key=your-app@example.com' }"
+  :AccountSchema="MyAppAccount"
+>
+  <MyApp />
+</JazzProvider>
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `sync` | `SyncConfig` | **required** | Sync configuration with peer URL |
+| `AccountSchema` | `AccountClass \| AnyAccountSchema` | `Account` | Account schema for your app |
+| `guestMode` | `boolean` | `false` | Allow anonymous/guest access |
+| `storage` | `"indexedDB"` | `undefined` | Storage backend (indexedDB recommended) |
+| `defaultProfileName` | `string` | `undefined` | Default name for new user profiles |
+| `enableSSR` | `boolean` | `false` | Enable server-side rendering support |
+| `logOutReplacement` | `() => void` | `undefined` | Custom logout handler |
+| `onLogOut` | `() => void` | `undefined` | Callback when user logs out |
+| `onAnonymousAccountDiscarded` | `(account) => Promise<void>` | `undefined` | Handle anonymous account cleanup |
+
+### Advanced Configuration
+
+```vue
+<JazzProvider
+  :sync="{ 
+    peer: 'wss://cloud.jazz.tools/?key=your-app@example.com',
+    when: 'online' 
+  }"
+  :AccountSchema="MyAppAccount"
+  :enableSSR="true"
+  storage="indexedDB"
+  defaultProfileName="Anonymous User"
+  :onLogOut="handleLogOut"
+  :logOutReplacement="customLogOut"
+  :onAnonymousAccountDiscarded="cleanupAnonymousData"
+>
+  <MyApp />
+</JazzProvider>
 ```
 
 ## Authentication
@@ -352,6 +421,65 @@ describe("Todo functionality", () => {
 });
 ```
 
+## Troubleshooting
+
+### "No active account" Error During Account Creation
+
+If you encounter this error during account setup, it's likely due to schema migrations trying to create CoValues without explicit groups. During migration, the active account context isn't available yet.
+
+**❌ Problem:**
+```ts
+export const MyAccount = co.account({
+  root: MyRoot,
+}).withMigration(async (account) => {
+  if (!account.root) {
+    // This will fail - no group specified
+    account.root = MyRoot.create({ items: [] });
+  }
+});
+```
+
+**✅ Solution:**
+```ts
+import { Group } from "jazz-tools";
+
+export const MyAccount = co.account({
+  root: MyRoot,
+}).withMigration(async (account) => {
+  if (!account.root) {
+    // Explicitly create and pass the group
+    const group = Group.create(account);
+    account.root = MyRoot.create({ items: [] }, group);
+  }
+  
+  if (!account.profile) {
+    const profileGroup = Group.create(account);
+    profileGroup.makePublic(); // If needed
+    account.profile = MyProfile.create({ name: "User" }, profileGroup);
+  }
+});
+```
+
+**Key Points:**
+- All CoValue creation during migrations needs explicit groups
+- Pass `Group.create(account)` as the second parameter to `.create()`
+- This includes Maps, Lists, and any nested CoValues
+- The account object is available in the migration function but not in the active context yet
+
+### TypeScript Errors with New Account Schemas
+
+If you're using the new `co.account()` syntax and getting type errors:
+
+```ts
+// Make sure to import the account schema type
+import type { MyAppAccount } from "./schema";
+
+// Use the schema with useAccount for better typing
+const { me, agent } = useAccount(MyAppAccount, {
+  resolve: { root: { todos: true } }
+});
+```
+
 ## Examples
 
 Check out these examples to see jazz-vue-vamp in action:
@@ -372,6 +500,28 @@ If you're migrating from the original `jazz-vue` package:
 ## Migration from pre-0.15.0 versions
 
 If you're upgrading from earlier versions of vamp or jazz-vue, note these changes in 0.15.0:
+
+### Package Updates
+
+```bash
+# Update to jazz-tools 0.15.4
+npm install jazz-vue-vamp@^0.15.0 jazz-tools@^0.15.4
+
+# Remove jazz-browser (now included in jazz-tools)
+npm uninstall jazz-browser
+```
+
+### Import Changes
+
+```ts
+// Before (if using jazz-browser directly)
+import { createInviteLink, parseInviteLink } from "jazz-browser";
+
+// After (jazz-browser functionality moved to jazz-tools/browser)
+import { createInviteLink, parseInviteLink } from "jazz-tools/browser";
+// Or use the re-exports from jazz-vue-vamp
+import { createInviteLink, parseInviteLink } from "jazz-vue-vamp";
+```
 
 ### `useAccount()` Changes
 
@@ -406,6 +556,13 @@ if (agent.value._type === "Anonymous") {
   // Use agent to load data
 }
 ```
+
+### New Features Available
+
+- **experimental_useInboxSender()** - Send messages between users
+- **Enhanced JazzProvider** - New props for SSR and custom logout handling
+- **Better error handling** - Improved account creation and subscription management
+- **Performance improvements** - Optimized context management and subscription cleanup
 
 ## Contributing
 

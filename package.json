@@ -16,9 +16,8 @@
     }
   },
   "dependencies": {
-    "cojson": "^0.14.0",
-    "jazz-browser": "^0.14.0",
-    "jazz-tools": "^0.14.0"
+    "cojson": "^0.15.4",
+    "jazz-tools": "^0.15.4"
   },
   "devDependencies": {
     "@scure/bip39": "^1.3.0",

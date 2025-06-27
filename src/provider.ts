@@ -1,4 +1,4 @@
-import { JazzBrowserContextManager } from "jazz-browser";
+import { JazzBrowserContextManager, type JazzContextManagerProps } from "jazz-tools/browser";
 import type {
   Account,
   AccountClass,
@@ -15,12 +15,13 @@ import {
   provide,
   ref,
   watch,
+  computed,
 } from "vue";
 
 export const logoutHandler = ref<() => void>();
 
 // biome-ignore lint/suspicious/noEmptyInterface: This interface is meant to be module augmented by users
-export interface Register {}
+export interface Register { }
 
 export type RegisteredAccount = Register extends { Account: infer Acc }
   ? Acc
@@ -69,51 +70,104 @@ export const JazzProvider = defineComponent({
       type: Function as PropType<() => void>,
       required: false,
     },
+    logOutReplacement: {
+      type: Function as PropType<() => void>,
+      required: false,
+    },
+    enableSSR: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup(props, { slots }) {
     const contextManager = new JazzBrowserContextManager<
       (AccountClass<Account> & CoValueFromRaw<Account>) | AnyAccountSchema
-    >();
+    >({
+      useAnonymousFallback: props.enableSSR,
+    });
+
     // biome-ignore lint/suspicious/noExplicitAny: Complex generic typing with Jazz framework internals
-    const ctx = ref<JazzContextType<any>>();
+    const ctx = ref<JazzContextType<any> | undefined>(undefined);
 
     provide(JazzContextSymbol, ctx);
     provide(JazzAuthContextSymbol, contextManager.getAuthSecretStorage());
 
+    // Create stable callback references like React's useRefCallback
+    const onLogOutCallback = () => props.onLogOut?.();
+    const logOutReplacementCallback = () => props.logOutReplacement?.();
+    const onAnonymousAccountDiscardedCallback = async (anonymousAccount: any) => {
+      if (props.onAnonymousAccountDiscarded) {
+        return props.onAnonymousAccountDiscarded(anonymousAccount);
+      }
+    };
+
+    // Track if logOutReplacement is active
+    const logoutReplacementActive = computed(() => Boolean(props.logOutReplacement));
+
+    let unsubscribe: (() => void) | undefined;
+
+    const createContextWithProps = () => {
+      const contextProps: JazzContextManagerProps<any> = {
+        AccountSchema: props.AccountSchema,
+        guestMode: props.guestMode,
+        sync: props.sync,
+        storage: props.storage,
+        defaultProfileName: props.defaultProfileName,
+        onLogOut: onLogOutCallback,
+        logOutReplacement: logoutReplacementActive.value ? logOutReplacementCallback : undefined,
+        onAnonymousAccountDiscarded: onAnonymousAccountDiscardedCallback,
+      };
+
+      if (contextManager.propsChanged(contextProps)) {
+        contextManager.createContext(contextProps).then(() => {
+          // Set up subscription if not already done
+          if (!unsubscribe) {
+            unsubscribe = contextManager.subscribe(() => {
+              ctx.value = contextManager.getCurrentValue();
+            });
+          }
+
+          // Update current value
+          ctx.value = contextManager.getCurrentValue();
+        }).catch((error) => {
+          console.error("Error creating Jazz browser context:", error);
+        });
+      } else {
+        // Still set up subscription if not already done
+        if (!unsubscribe) {
+          unsubscribe = contextManager.subscribe(() => {
+            ctx.value = contextManager.getCurrentValue();
+          });
+        }
+
+        // Update current value
+        ctx.value = contextManager.getCurrentValue();
+      }
+    };
+
+    // Watch for prop changes that should trigger context recreation
     watch(
       () => ({
         peer: props.sync.peer,
         syncWhen: props.sync.when,
         storage: props.storage,
         guestMode: props.guestMode,
+        AccountSchema: props.AccountSchema,
+        defaultProfileName: props.defaultProfileName,
+        hasLogOutReplacement: Boolean(props.logOutReplacement),
       }),
-      async () => {
-        contextManager
-          .createContext({
-            sync: props.sync,
-            storage: props.storage,
-            guestMode: props.guestMode,
-            AccountSchema: props.AccountSchema,
-            defaultProfileName: props.defaultProfileName,
-            onAnonymousAccountDiscarded: props.onAnonymousAccountDiscarded,
-            onLogOut: props.onLogOut,
-          })
-          .catch((error) => {
-            console.error("Error creating Jazz browser context:", error);
-          });
-      },
+      createContextWithProps,
       { immediate: true },
     );
 
-    onMounted(() => {
-      const cleanup = contextManager.subscribe(() => {
-        ctx.value = contextManager.getCurrentValue();
-      });
-      onUnmounted(cleanup);
-    });
-
     onUnmounted(() => {
-      if (ctx.value) ctx.value.done?.();
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      // Only call done() in production, not in development (for HMR)
+      if (process.env.NODE_ENV !== "development") {
+        contextManager.done();
+      }
     });
 
     return () => (ctx.value ? slots.default?.() : null);
