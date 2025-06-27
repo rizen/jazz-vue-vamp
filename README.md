@@ -101,8 +101,8 @@ import { ref } from "vue";
 import { useAccount } from "jazz-vue-vamp";
 import { MyAppAccount, TodoItem } from "./schema";
 
-// Get the current user with resolved data
-const { me, logOut } = useAccount(MyAppAccount, {
+// Get the current user with resolved data  
+const { me, agent, logOut } = useAccount(MyAppAccount, {
   resolve: { root: { todos: true } }
 });
 
@@ -133,35 +133,40 @@ function toggleTodo(todo: any) {
 
 ### `useAccount()`
 
-Access the current authenticated user account.
+Access the current user account and agent. Works in all authentication modes.
+
+**Return Value:**
+- `me` - The authenticated user account (always nullable)
+- `agent` - Current agent (authenticated account or anonymous guest) 
+- `logOut` - Function to sign out
 
 ```ts
-// Basic usage
-const { me, logOut } = useAccount();
+// Basic usage - works for authenticated and guest users
+const { me, agent, logOut } = useAccount();
+
+// Check authentication state
+if (agent.value._type === "Anonymous") {
+  // Guest user - me will be null
+  // Use agent to load public data
+} else {
+  // Authenticated user - me may be null until loaded
+  // Use agent to load data
+}
 
 // With schema (provides better typing)
-const { me, logOut } = useAccount(MyAppAccount);
+const { me, agent, logOut } = useAccount(MyAppAccount);
 
 // With deep resolution
-const { me, logOut } = useAccount(MyAppAccount, {
+const { me, agent, logOut } = useAccount(MyAppAccount, {
   resolve: { 
     root: { todos: true },
     profile: true
   }
 });
-```
 
-### `useAccountOrGuest()`
-
-Access the current user account or guest agent (for public data).
-
-```ts
-// Basic usage - works for both authenticated and guest users
-const { me } = useAccountOrGuest();
-
-// With resolution
-const { me } = useAccountOrGuest({
-  resolve: { root: true }
+// For guest access to public data, use the agent
+const publicTodos = useCoState(TodoList, publicTodoListId.value, {
+  loadAs: agent.value  // Works for both authenticated and guest users
 });
 ```
 
@@ -292,7 +297,7 @@ Control what data is loaded and when:
 
 ```ts
 // Load specific references
-const { me } = useAccount(MyAppAccount, {
+const { me, agent } = useAccount(MyAppAccount, {
   resolve: {
     root: {
       todos: {
@@ -303,7 +308,7 @@ const { me } = useAccount(MyAppAccount, {
 });
 
 // Conditional loading
-const { me } = useAccount(MyAppAccount, {
+const { me, agent } = useAccount(MyAppAccount, {
   resolve: selectedTodoId.value ? {
     root: { todos: { [selectedTodoId.value]: true } }
   } : {}
@@ -341,7 +346,8 @@ describe("Todo functionality", () => {
       { account }
     );
 
-    expect(result.me.value).toBeDefined();
+    expect(result.agent.value).toBeDefined();
+    expect(result.me.value).toBeDefined(); // May be null initially
   });
 });
 ```
@@ -362,6 +368,44 @@ If you're migrating from the original `jazz-vue` package:
 1. Update imports: `jazz-vue` → `jazz-vue-vamp`
 2. The API is largely compatible, but check the composable signatures
 3. New `co.account()` syntax is now supported alongside class-based schemas
+
+## Migration from pre-0.15.0 versions
+
+If you're upgrading from earlier versions of vamp or jazz-vue, note these changes in 0.15.0:
+
+### `useAccount()` Changes
+
+```ts
+// Before (pre-0.15.0)
+const { me, logOut } = useAccount();
+// me was never null (auto-fallback to contextMe)
+
+// After (0.15.0) 
+const { me, agent, logOut } = useAccount();
+// me is now always nullable, agent is always available
+```
+
+### `useAccountOrGuest()` Removed
+
+```ts
+// Before (pre-0.15.0)
+const { me } = useAccountOrGuest();
+if (me.value._type === "Anonymous") {
+  // Handle guest
+} else {
+  // Handle authenticated user
+}
+
+// After (0.15.0) - Use useAccount() instead
+const { me, agent } = useAccount();
+if (agent.value._type === "Anonymous") {
+  // Handle guest - me will be null
+  // Use agent to load data
+} else {
+  // Handle authenticated user - me may be null until loaded
+  // Use agent to load data
+}
+```
 
 ## Contributing
 

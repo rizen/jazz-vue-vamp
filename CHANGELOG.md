@@ -3,9 +3,21 @@
 ## 0.15.0
 
 ### Breaking Changes
+- **useAccount() API Changes**: Updated to match React 0.15.4 behavior
+  - `me` is now always nullable (no auto-fallback to contextMe)
+  - Removed `useAccountOrGuest()` function - use `useAccount()` instead
+- **New Return Value**: `useAccount()` now returns `{ me, agent, logOut }` instead of `{ me, logOut }`
 - Converting the discontinued jazz-vue package to a standalone package known as jazz-vue-vamp.
 
 ### Features
+- **agent Property**: Added `agent` property to `useAccount()` return value
+  - Always available (authenticated account or anonymous guest)
+  - Can be used to load data in all rendering modes (guest, authenticated, unauthenticated)
+  - Replaces the need for separate `useAccountOrGuest()` function
+- **Unified API**: Single `useAccount()` function now handles all use cases
+  - Works seamlessly with guest accounts
+  - Consistent behavior across authentication states
+  - Better null safety with always-nullable `me`
 - **useAccount() React API Compatibility**: Added support for React-style API where AccountSchema can be passed as the first parameter
   ```ts
   // New React-style API
@@ -21,6 +33,27 @@
   const isAuthenticated = useIsAuthenticated();
   // Reactive boolean that tracks authentication state changes
   ```
+
+### Migration Guide
+```ts
+// Before (0.15.0)
+const { me } = useAccountOrGuest();
+if (me.value._type === "Anonymous") {
+  // Handle guest
+} else {
+  // Handle authenticated user
+}
+
+// After (0.15.0)
+const { me, agent } = useAccount();
+if (agent.value._type === "Anonymous") {
+  // Handle guest - me will be null
+  // Use agent to load data
+} else {
+  // Handle authenticated user - me may be null until loaded
+  // Use agent to load data
+}
+```
 
 ### Fixes
 - **useAccount() Type Accuracy**: Fixed TypeScript type errors when using the new `co.account()` schema syntax (AnyAccountSchema)
