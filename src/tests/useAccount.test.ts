@@ -54,4 +54,55 @@ describe("useAccount", () => {
 
     expect(result.me.value?.root?.value).toBe("123");
   });
+
+  // New React-style API tests
+  it("should work with React-style API (AccountSchema as first parameter)", async () => {
+    const account = await createJazzTestAccount({ AccountSchema });
+
+    const [result] = withJazzTestSetup(
+      () => useAccount(AccountSchema),
+      {
+        account,
+      },
+    );
+
+    expect(result.me.value).toEqual(account);
+    expect(result.me.value?.root).toBeDefined();
+  });
+
+  it("should work with React-style API and resolve options", async () => {
+    const account = await createJazzTestAccount({ AccountSchema });
+
+    const [result] = withJazzTestSetup(
+      () =>
+        useAccount(AccountSchema, {
+          resolve: {
+            root: true,
+          },
+        }),
+      {
+        account,
+      },
+    );
+
+    expect(result.me.value?.root?.value).toBe("123");
+  });
+
+  it("should have correct types with React-style API", async () => {
+    const account = await createJazzTestAccount({ AccountSchema });
+
+    const [result] = withJazzTestSetup(
+      () => useAccount(AccountSchema),
+      {
+        account,
+      },
+    );
+
+    // TypeScript should infer the correct type
+    if (result.me.value) {
+      // This should not cause type errors
+      const rootValue = result.me.value.root?.value;
+      expect(typeof rootValue).toBe("string");
+    }
+  });
 });

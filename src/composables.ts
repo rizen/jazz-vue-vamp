@@ -12,6 +12,14 @@ import {
   type RefsToResolveStrict,
   type Resolved,
   subscribeToCoValue,
+  type Account,
+  type AccountClass,
+  type AnyAccountSchema,
+  type ResolveQuery,
+  type ResolveQueryStrict,
+  type Loaded,
+  type InstanceOfSchema,
+  anySchemaToCoSchema,
 } from "jazz-tools";
 import {
   type ComputedRef,
@@ -56,6 +64,40 @@ export function useAuthSecretStorage() {
   return context;
 }
 
+// Support for new AccountSchema (co.account())
+export function useAccount<S extends AnyAccountSchema>(
+  AccountSchema: S
+): {
+  me: ComputedRef<InstanceOfSchema<S>>;
+  logOut: () => void;
+};
+export function useAccount<S extends AnyAccountSchema, const R extends RefsToResolve<InstanceOfSchema<S>>>(
+  AccountSchema: S,
+  options?: {
+    resolve?: RefsToResolveStrict<InstanceOfSchema<S>, R>;
+  }
+): {
+  me: ComputedRef<Resolved<InstanceOfSchema<S>, R> | undefined | null>;
+  logOut: () => void;
+};
+
+// Support for old AccountClass approach  
+export function useAccount<A extends Account>(
+  AccountSchema: AccountClass<A>
+): {
+  me: ComputedRef<A>;
+  logOut: () => void;
+};
+export function useAccount<A extends Account, const R extends RefsToResolve<A>>(
+  AccountSchema: AccountClass<A>,
+  options?: {
+    resolve?: RefsToResolveStrict<A, R>;
+  }
+): {
+  me: ComputedRef<Resolved<A, R> | undefined | null>;
+  logOut: () => void;
+};
+
 export function useAccount(): {
   me: ComputedRef<RegisteredAccount>;
   logOut: () => void;
@@ -68,16 +110,11 @@ export function useAccount<
   me: ComputedRef<Resolved<RegisteredAccount, R> | undefined | null>;
   logOut: () => void;
 };
-export function useAccount<
-  const R extends RefsToResolve<RegisteredAccount>,
->(options?: {
-  resolve?: RefsToResolveStrict<RegisteredAccount, R>;
-}): {
-  me: ComputedRef<
-    RegisteredAccount | Resolved<RegisteredAccount, R> | undefined | null
-  >;
-  logOut: () => void;
-} {
+
+export function useAccount(
+  AccountSchemaOrOptions?: any,
+  options?: any
+): any {
   const context = useJazzContext();
 
   if (!context.value) {
@@ -92,22 +129,81 @@ export function useAccount<
 
   const contextMe = context.value.me as RegisteredAccount;
 
-  const me = useCoState<RegisteredAccount, R>(
-    contextMe.constructor as CoValueClass<RegisteredAccount>,
-    contextMe.id,
-    options,
-  );
+  // Case 1: No parameters - use RegisteredAccount
+  if (!AccountSchemaOrOptions) {
+    return {
+      me: computed(() => toRaw(contextMe)),
+      logOut: context.value.logOut,
+    };
+  }
 
-  return {
-    me: computed(() => {
-      const value =
-        options?.resolve === undefined
-          ? me.value ||
-            toRaw((context.value as JazzAuthContext<RegisteredAccount>).me)
+  // Case 2: Options object only
+  if (typeof AccountSchemaOrOptions === 'object' && !AccountSchemaOrOptions.collaborative) {
+    const resolveOptions = AccountSchemaOrOptions;
+    const me = useCoState<RegisteredAccount, any>(
+      contextMe.constructor as CoValueClass<RegisteredAccount>,
+      contextMe.id,
+      resolveOptions,
+    );
+
+    return {
+      me: computed(() => {
+        const value = !resolveOptions?.resolve
+          ? me.value || toRaw(contextMe)
           : me.value;
+        return value ? toRaw(value) : value;
+      }),
+      logOut: context.value.logOut,
+    };
+  }
 
-      return value ? toRaw(value) : value;
-    }),
+  // Case 3: AccountSchema (co.account()) or AccountClass provided
+  const AccountSchema = AccountSchemaOrOptions;
+
+  // Check if it's a new AccountSchema (has collaborative property)
+  if (AccountSchema && typeof AccountSchema === 'object' && AccountSchema.collaborative) {
+    // Convert AccountSchema to CoValueClass using anySchemaToCoSchema
+    const CoSchema = anySchemaToCoSchema(AccountSchema) as CoValueClass<Account>;
+
+    const me = useCoState<Account, any>(
+      CoSchema,
+      contextMe.id as ID<Account>,
+      options,
+    );
+
+    return {
+      me: computed(() => {
+        const value = !options?.resolve
+          ? me.value || (contextMe as Account)
+          : me.value;
+        return value ? toRaw(value) : value;
+      }),
+      logOut: context.value.logOut,
+    };
+  }
+
+  // Case 4: Old AccountClass (function)
+  if (typeof AccountSchema === 'function') {
+    const me = useCoState<Account, any>(
+      AccountSchema as CoValueClass<Account>,
+      contextMe.id as ID<Account>,
+      options,
+    );
+
+    return {
+      me: computed(() => {
+        const value = !options?.resolve
+          ? me.value || (contextMe as Account)
+          : me.value;
+        return value ? toRaw(value) : value;
+      }),
+      logOut: context.value.logOut,
+    };
+  }
+
+  // Fallback
+  return {
+    me: computed(() => toRaw(contextMe)),
     logOut: context.value.logOut,
   };
 }
@@ -158,7 +254,7 @@ export function useAccountOrGuest<
       me: computed(() =>
         options?.resolve === undefined
           ? me.value ||
-            toRaw((context.value as JazzAuthContext<RegisteredAccount>).me)
+          toRaw((context.value as JazzAuthContext<RegisteredAccount>).me)
           : me.value,
       ),
     };

@@ -2,7 +2,26 @@
 
 ## 0.15.0
 
+### Breaking Changes
 - Converting the discontinued jazz-vue package to a standalone package known as jazz-vue-vamp.
+
+### Features
+- **useAccount() React API Compatibility**: Added support for React-style API where AccountSchema can be passed as the first parameter
+  ```ts
+  // New React-style API
+  const { me } = useAccount(MyAppAccount);
+  const { me } = useAccount(MyAppAccount, { resolve: { root: true } });
+  
+  // Legacy API still supported
+  const { me } = useAccount();
+  const { me } = useAccount({ resolve: { root: true } });
+  ```
+
+### Fixes
+- **useAccount() Type Accuracy**: Fixed TypeScript type errors when using the new `co.account()` schema syntax (AnyAccountSchema)
+  - Now properly supports schema-based accounts (`AnyAccountSchema`)
+  - Added `anySchemaToCoSchema()` conversion for new account schemas
+  - Improved type inference and eliminated "type not matching" errors
 
 
 ## 0.14.28
