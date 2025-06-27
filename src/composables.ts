@@ -86,6 +86,7 @@ export function useAccount(
   options?: any
 ): any {
   const context = useJazzContext();
+  const authSecretStorage = inject<any>(JazzAuthContextSymbol);
 
   if (!context.value) {
     throw new Error("useAccount must be used within a JazzProvider");
@@ -207,7 +208,6 @@ export function useAccount(
       }
 
       // For auth mode, check if user is actually authenticated
-      const authSecretStorage = inject<any>(JazzAuthContextSymbol);
       const isAuthenticated = !authSecretStorage || authSecretStorage.isAuthenticated !== false;
 
       // Return agent with correct _type based on authentication state
