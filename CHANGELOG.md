@@ -132,6 +132,12 @@ export const MyAccount = co.account({
   - Anonymous agents now correctly return null subscriptions
   - Authenticated agents use specialized subscription logic
   - Better error handling and subscription cleanup
+- **JazzVueProvider**: Fixed prop validation warning for `AccountSchema` when using `co.account()` schemas
+  - Changed prop type from `Function` to `[Function, Object]` to accept both class-based and schema-based accounts
+  - Eliminates Vue warning: "Invalid prop: type check failed for prop 'AccountSchema'. Expected Function, got Object"
+- **Schema Migration**: Fixed "No active account" error during account creation migrations
+  - Added troubleshooting documentation for schema migration patterns
+  - Improved error messages to help identify migration issues
 
 ### Performance
 - **Provider Optimization**: Reduced unnecessary context recreations

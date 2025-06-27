@@ -265,7 +265,7 @@ The `JazzVueProvider` component sets up the Jazz context for your entire applica
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `sync` | `SyncConfig` | **required** | Sync configuration with peer URL |
-| `AccountSchema` | `AccountClass \| AnyAccountSchema` | `Account` | Account schema for your app |
+| `AccountSchema` | `AccountClass \| AnyAccountSchema` | `Account` | Account schema for your app (supports both class-based `AccountClass` and schema-based `co.account()` accounts) |
 | `guestMode` | `boolean` | `false` | Allow anonymous/guest access |
 | `storage` | `"indexedDB"` | `undefined` | Storage backend (indexedDB recommended) |
 | `defaultProfileName` | `string` | `undefined` | Default name for new user profiles |

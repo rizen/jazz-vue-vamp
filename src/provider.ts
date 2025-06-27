@@ -48,7 +48,7 @@ export const JazzVueProvider = defineComponent({
       required: true,
     },
     AccountSchema: {
-      type: Function as unknown as PropType<
+      type: [Function, Object] as unknown as PropType<
         (AccountClass<Account> & CoValueFromRaw<Account>) | AnyAccountSchema
       >,
       required: false,
