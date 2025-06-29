@@ -130,6 +130,10 @@ export const MyAccount = co.account({
 - **Schema Migration**: Fixed "No active account" error during account creation migrations
   - Added troubleshooting documentation for schema migration patterns
   - Improved error messages to help identify migration issues
+- **Schema Validation**: Fixed `schema.ref is not a function` error with jazz-tools 0.15.4
+  - Temporarily disabled `co.account()` schema conversion due to compatibility issues
+  - `co.account()` schemas now fall back to default Account class until upstream fix is available
+  - Class-based account schemas continue to work normally
 
 ### Performance
 - **Provider Optimization**: Reduced unnecessary context recreations

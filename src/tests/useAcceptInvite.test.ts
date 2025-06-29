@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { CoMap, Group, type ID, coField } from "jazz-tools";
+import { co, z, Group, type ID } from "jazz-tools";
 import { describe, expect, it } from "vitest";
 import { createInviteLink } from "jazz-tools/browser";
 import { useAcceptInvite } from "../index.js";
@@ -9,16 +9,16 @@ import { waitFor, withJazzTestSetup } from "./testUtils.js";
 
 describe("useAcceptInvite", () => {
   it("should accept the invite", async () => {
-    class TestMap extends CoMap {
-      value = coField.string;
-    }
+    const TestMap = co.map({
+      value: z.string(),
+    });
 
     const account = await createJazzTestAccount();
     const inviteSender = await createJazzTestAccount();
 
     await linkAccounts(account, inviteSender);
 
-    let acceptedId: ID<TestMap> | undefined;
+    let acceptedId: ID<typeof TestMap> | undefined;
 
     const invitelink = createInviteLink(
       TestMap.create(

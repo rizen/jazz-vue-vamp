@@ -121,12 +121,18 @@ export function useAccount(
     Schema = Account as CoValueClass<Account>;
     resolveOptions = AccountSchemaOrOptions || options;
   } else {
-    // Case 2: AccountSchema provided (either class or co.account() schema)
+    // Case 2: AccountSchema provided (modern co.account() schema)
     if (typeof AccountSchemaOrOptions === 'object' && AccountSchemaOrOptions.collaborative) {
-      // New schema format (co.account())
-      Schema = anySchemaToCoSchema(AccountSchemaOrOptions) as CoValueClass<Account>;
+      // Convert modern account schema to CoValueClass format
+      try {
+        Schema = anySchemaToCoSchema(AccountSchemaOrOptions) as CoValueClass<Account>;
+      } catch (error) {
+        console.error("Failed to convert account schema:", error);
+        console.warn("Falling back to default Account class");
+        Schema = Account as CoValueClass<Account>;
+      }
     } else {
-      // Class format
+      // Assume it's already a CoValueClass (legacy support)
       Schema = AccountSchemaOrOptions as CoValueClass<Account>;
     }
     resolveOptions = options;
@@ -221,8 +227,8 @@ export function useAccount(
   };
 }
 
-export function useCoState<V extends CoValue, const R extends RefsToResolve<V>>(
-  Schema: CoValueClass<V>,
+export function useCoState<V extends CoValue = CoValue, const R extends RefsToResolve<V> = RefsToResolve<V>>(
+  Schema: any, // Modern schema format (co.map(), co.list(), etc.)
   id: MaybeRef<ID<CoValue> | undefined>,
   options?: { resolve?: RefsToResolveStrict<V, R> },
 ): Ref<Resolved<V, R> | undefined | null> {
@@ -244,8 +250,18 @@ export function useCoState<V extends CoValue, const R extends RefsToResolve<V>>(
       const idValue = unref(id);
       if (!idValue || !context.value) return;
 
+      // Convert modern schema to CoValueClass format for subscribeToCoValue
+      let ConvertedSchema: CoValueClass<any>;
+      try {
+        ConvertedSchema = anySchemaToCoSchema(Schema);
+      } catch (error) {
+        console.error("Failed to convert schema in useCoState:", error);
+        console.error("Schema object:", Schema);
+        throw new Error(`Invalid schema passed to useCoState: ${error}`);
+      }
+
       unsubscribe = subscribeToCoValue(
-        Schema,
+        ConvertedSchema,
         idValue,
         {
           resolve: options?.resolve,
@@ -283,7 +299,7 @@ export function useAcceptInvite<V extends CoValue>({
   onAccept,
   forValueHint,
 }: {
-  invitedObjectSchema: CoValueClass<V>;
+  invitedObjectSchema: any; // Modern schema format (co.map(), co.list(), etc.)
   onAccept: (projectID: ID<V>) => void;
   forValueHint?: string;
 }): void {
@@ -300,9 +316,18 @@ export function useAcceptInvite<V extends CoValue>({
   }
 
   const handleInvite = () => {
+    // Convert modern schema to CoValueClass format
+    let ConvertedSchema: CoValueClass<any>;
+    try {
+      ConvertedSchema = anySchemaToCoSchema(invitedObjectSchema);
+    } catch (error) {
+      console.error("Failed to convert schema in useAcceptInvite:", error);
+      throw new Error(`Invalid schema passed to useAcceptInvite: ${error}`);
+    }
+
     const result = consumeInviteLinkFromWindowLocation({
       as: toRaw((context.value as JazzAuthContext<RegisteredAccount>).me),
-      invitedObjectSchema,
+      invitedObjectSchema: ConvertedSchema,
       forValueHint,
     });
 

@@ -516,6 +516,25 @@ const { me, agent } = useAccount(MyAppAccount, {
 });
 ```
 
+### Known Issues
+
+#### `co.account()` Schema Support (jazz-tools 0.15.4)
+
+Due to compatibility issues with jazz-tools 0.15.4, `co.account()` schemas temporarily fall back to the default Account class. This means:
+
+- **Class-based account schemas**: Work normally ✅
+- **`co.account()` schemas**: Fall back to default Account class ⚠️
+
+```ts
+// This works normally
+const { me, agent } = useAccount(MyAccountClass);
+
+// This falls back to default Account class until fixed
+const { me, agent } = useAccount(MyAccountSchema); // co.account() schema
+```
+
+We're tracking this issue and will restore full `co.account()` support in a future release once the upstream compatibility issue is resolved.
+
 ## Examples
 
 Check out these examples to see jazz-vue-vamp in action:
