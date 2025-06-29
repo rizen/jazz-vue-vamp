@@ -227,12 +227,15 @@ export function useAccount(
   };
 }
 
-export function useCoState<V extends CoValue = CoValue, const R extends RefsToResolve<V> = RefsToResolve<V>>(
-  Schema: any, // Modern schema format (co.map(), co.list(), etc.)
+// Helper type to extract the return type from schema.create()
+type SchemaReturnType<T> = T extends { create: (...args: any[]) => infer R } ? R : CoValue;
+
+export function useCoState<T>(
+  Schema: T & { create: (...args: any[]) => any }, // Modern schema format (co.map(), co.list(), etc.)
   id: MaybeRef<ID<CoValue> | undefined>,
-  options?: { resolve?: RefsToResolveStrict<V, R> },
-): Ref<Resolved<V, R> | undefined | null> {
-  const state: ShallowRef<Resolved<V, R> | undefined | null> =
+  options?: { resolve?: any },
+): Ref<SchemaReturnType<T> | undefined | null> {
+  const state: ShallowRef<SchemaReturnType<T> | undefined | null> =
     shallowRef(undefined);
   const context = useJazzContext();
 
@@ -253,7 +256,7 @@ export function useCoState<V extends CoValue = CoValue, const R extends RefsToRe
       // Convert modern schema to CoValueClass format for subscribeToCoValue
       let ConvertedSchema: CoValueClass<any>;
       try {
-        ConvertedSchema = anySchemaToCoSchema(Schema);
+        ConvertedSchema = anySchemaToCoSchema(Schema as any);
       } catch (error) {
         console.error("Failed to convert schema in useCoState:", error);
         console.error("Schema object:", Schema);
