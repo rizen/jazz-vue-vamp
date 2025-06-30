@@ -3,6 +3,7 @@
 ## 0.15.0
 
 ### Breaking Changes
+- Implemented our own version of createInviteLink() because we couldn't get the one built into jazz working with our useCoState(). Will replace this one with the official one eventually
 - **Component Rename**: `JazzProvider` renamed to `JazzVueProvider` for consistency with jazz-tools 0.15.4 naming
   - Import: `import { JazzVueProvider } from "jazz-vue-vamp"` 
   - Usage: `<JazzVueProvider>` instead of `<JazzProvider>`

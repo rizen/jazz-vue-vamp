@@ -403,3 +403,49 @@ export function experimental_useInboxSender<
 
   return sendMessage;
 }
+
+/**
+ * Creates an invite link for a CoValue with the specified role.
+ * This is a temporary implementation that works around issues with jazz-tools' createInviteLink.
+ * Once the Jazz team fixes the expectGroup issue, this can be replaced with the official version.
+ * 
+ * @category Invite Links
+ */
+export function createInviteLink<C extends CoValue>(
+  value: C,
+  role: "reader" | "writer" | "admin" | "writeOnly",
+  {
+    baseURL = window.location.href.replace(/#.*$/, ""),
+    valueHint,
+  }: { baseURL?: string; valueHint?: string } = {},
+): string {
+  try {
+    // Get the raw object from the value (works with jazz-vue-vamp objects)
+    const rawValue = (value as any)._raw;
+    if (!rawValue || !rawValue.core) {
+      throw new Error("Invalid CoValue: missing _raw.core");
+    }
+
+    let currentCoValue = rawValue.core;
+
+    // Walk up the ownership chain to find the group
+    while (currentCoValue.verified.header.ruleset.type === "ownedByGroup") {
+      currentCoValue = currentCoValue.getGroup().core;
+    }
+
+    const { ruleset, meta } = currentCoValue.verified.header;
+    if (ruleset.type !== "group" || meta?.type === "account") {
+      throw new Error("Can't create invite link for object without group");
+    }
+
+    // Get the group content and create invite secret
+    const groupContent = currentCoValue.getCurrentContent();
+    const inviteSecret = (groupContent as any).createInvite(role);
+
+    // Create the invite URL with the same format as jazz-tools
+    return `${baseURL}#/invite/${valueHint ? valueHint + "/" : ""}${(value as any).id
+      }/${inviteSecret}`;
+  } catch (error) {
+    throw new Error(`Failed to create invite link: ${error}`);
+  }
+}
