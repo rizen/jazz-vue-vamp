@@ -1,5 +1,10 @@
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
+# examples
+examples/games-list/node_modules
+examples/games-list/.nuxt
+examples/games-list/.output
+
 # Logs
 
 logs

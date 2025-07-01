@@ -18,6 +18,7 @@
 - Converting the discontinued jazz-vue package to a standalone package known as jazz-vue-vamp.
 
 ### Features
+- **Added Games List Example** An example application that demonstrates many of Jazz's core features all using Vue.
 - **Added JS Doc**: All exported functions now have JSDoc.
 - **Full React 0.15.4 Parity**: Complete feature compatibility with React jazz-tools
 - **agent Property**: Added `agent` property to `useAccount()` return value
