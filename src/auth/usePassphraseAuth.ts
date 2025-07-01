@@ -4,14 +4,45 @@ import { useAuthSecretStorage, useJazzContext } from "../composables.js";
 import { useIsAuthenticated } from "./useIsAuthenticated.js";
 
 /**
- * `usePassphraseAuth` composable provides a `JazzAuth` object for passphrase authentication.
- *
+ * Provides passphrase authentication functionality for secure, memorable authentication.
+ * 
+ * This composable implements passphrase-based authentication using a wordlist
+ * to generate human-readable, secure passphrases. This method provides good
+ * security while being more memorable than random passwords, and works well
+ * for scenarios where passkeys aren't available or desired.
+ * 
+ * @param config - Configuration object for passphrase authentication
+ * @param config.wordlist - Array of words to use for generating passphrases
+ * @returns An object with authentication state, methods, and current passphrase
+ * @throws {Error} When used outside of a JazzVueProvider or in guest mode
+ * 
  * @example
  * ```ts
+ * import { wordlist } from './wordlist'; // Your word list
+ * 
  * const auth = usePassphraseAuth({ wordlist });
+ * 
+ * // Check authentication state
+ * console.log('Current state:', auth.value.state); // "signedIn" | "anonymous"
+ * 
+ * // Generate a new random passphrase
+ * const newPassphrase = auth.value.generateRandomPassphrase();
+ * console.log('New passphrase:', newPassphrase);
+ * 
+ * // Sign up with a passphrase
+ * auth.value.signUp(newPassphrase);
+ * 
+ * // Log in with existing passphrase
+ * auth.value.logIn(existingPassphrase);
+ * 
+ * // Register a new account (different from signUp)
+ * auth.value.registerNewAccount();
+ * 
+ * // Get current user's passphrase
+ * console.log('Current passphrase:', auth.value.passphrase);
  * ```
- *
- * @category Auth Providers
+ * 
+ * @category Authentication
  */
 export function usePassphraseAuth({
   wordlist,

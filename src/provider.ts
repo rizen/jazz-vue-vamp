@@ -36,6 +36,34 @@ declare module "jazz-tools" {
 export const JazzContextSymbol = Symbol("JazzContext");
 export const JazzAuthContextSymbol = Symbol("JazzAuthContext");
 
+/**
+ * The JazzVueProvider component sets up the Jazz context for your entire application.
+ * 
+ * This component must wrap your entire Vue app to provide Jazz functionality
+ * to all child components. It handles authentication, sync configuration,
+ * and provides the context needed for all Jazz composables to work.
+ * 
+ * @example
+ * ```vue
+ * <template>
+ *   <JazzVueProvider
+ *     :sync="{ peer: 'wss://cloud.jazz.tools/?key=your-app@example.com' }"
+ *     :AccountSchema="MyAppAccount"
+ *   >
+ *     <MyApp />
+ *   </JazzVueProvider>
+ * </template>
+ * 
+ * <script setup lang="ts">
+ * import { JazzVueProvider } from "jazz-vue-vamp";
+ * import { MyAppAccount } from "./schema";
+ * import MyApp from "./MyApp.vue";
+ * </script>
+ * ```
+ * 
+ * @component
+ * @category Core
+ */
 export const JazzVueProvider = defineComponent({
   name: "JazzVueProvider",
   props: {

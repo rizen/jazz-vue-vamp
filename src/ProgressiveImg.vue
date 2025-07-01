@@ -1,3 +1,39 @@
+<!--
+/**
+ * A progressive image loading component for Jazz ImageDefinition objects.
+ * 
+ * This component loads Jazz images progressively, starting with a placeholder
+ * and automatically upgrading to higher resolutions as they become available.
+ * It provides optimal loading performance and bandwidth usage for Jazz image assets.
+ * 
+ * @component
+ * @example
+ * ```vue
+ * <template>
+ *   <ProgressiveImg :image="userAvatar" :max-width="200">
+ *     <template #default="{ src, res, originalSize }">
+ *       <img 
+ *         :src="src" 
+ *         :alt="User Avatar"
+ *         :class="{ 'loading': res === 'placeholder' }"
+ *         :width="originalSize?.[0]"
+ *         :height="originalSize?.[1]"
+ *       />
+ *     </template>
+ *   </ProgressiveImg>
+ * </template>
+ * 
+ * <script setup>
+ * import { ProgressiveImg } from "jazz-vue-vamp";
+ * import { useCoState } from "jazz-vue-vamp";
+ * 
+ * const userAvatar = useCoState(ImageDefinition, avatarId);
+ * </script>
+ * ```
+ * 
+ * @category Components
+ */
+-->
 <script setup lang="ts">
 import { ImageDefinition, type Loaded } from "jazz-tools";
 import { type Ref, onUnmounted, ref, toRef, watch } from "vue";
@@ -8,6 +44,15 @@ interface ImageState {
   originalSize?: readonly [number, number];
 }
 
+/**
+ * Internal composable for handling progressive image loading.
+ * 
+ * @param image - Reactive reference to a Jazz ImageDefinition
+ * @param maxWidth - Maximum width to load (for bandwidth optimization)
+ * @param targetWidth - Target display width for resolution selection
+ * @returns Reactive image state with src, resolution, and original size
+ * @internal
+ */
 function useProgressiveImg(
   image: Ref<Loaded<typeof ImageDefinition> | null | undefined>,
   maxWidth?: number,
